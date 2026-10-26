@@ -182,6 +182,45 @@ function persistLocalMirror() {
   }
 }
 
+// Abre o cofre (IndexedDB) e remescla o histórico pesado sobre o DB que veio do
+// espelho leve do localStorage. Tem que rodar no início do boot, em TODOS os
+// caminhos — inclusive quando há sessão Supabase ativa.
+async function initLocalVault() {
+  const bootedFromPartialMirror = !!(DB && DB._partial);
+  if (DB) delete DB._partial;
+
+  try {
+    const idbData = await loadFromIDB();
+    if (idbData && Array.isArray(idbData.vendas)) {
+      // Nunca escolhe uma cópia inteira apenas pelo número de vendas. Mescla o
+      // cofre com a memória atual para que uma lista vazia não apague mesas.
+      const restored = mergeRemoteDB(idbData, true);
+      persistLocalMirror();
+      await saveToIDB(DB);
+      if (restored) {
+        console.log('✨ Dados de segurança recuperados do IndexedDB.');
+        if (typeof renderDashboard === 'function' && currentPage === 'dashboard') renderDashboard();
+        if (typeof renderCaixa === 'function' && currentPage === 'caixa') {
+          const content = document.getElementById('content');
+          if (content) content.innerHTML = renderCaixa();
+        }
+      }
+    } else if (!idbData) {
+      // Primeiro uso neste navegador: promove o que existe para o cofre.
+      await saveToIDB(DB);
+    } else if (bootedFromPartialMirror) {
+      console.warn('[COFRE] IndexedDB sem histórico utilizável. O histórico virá da nuvem.');
+    }
+
+    const safetyRecovered = await recoverMissingMesasFromSafetySnapshot({ reason: 'inicializacao' });
+    if (safetyRecovered > 0) {
+      console.warn(`🛟 ${safetyRecovered} mesa(s) recuperada(s) automaticamente na inicialização.`);
+    }
+  } catch (e) {
+    console.error('Erro na inicialização do IndexedDB', e);
+  }
+}
+
 // Mantém cópias pequenas e independentes das comandas abertas. Esses snapshots
 // não substituem o banco principal e existem para recuperação em caso de uma
 // resposta remota vazia, corrida entre abas ou falha durante a sincronização.
