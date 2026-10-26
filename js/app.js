@@ -169,6 +169,36 @@ async function loadFromIDB() {
   }
 }
 
+// O localStorage tem ~5 MB por origem e o DB completo já passa disso (o histórico
+// de vendas sozinho ocupa mais de 4 MB). Gravar o DB inteiro aqui falhava em TODA
+// chamada, o erro era engolido, e o `convpro_db` ficava congelado numa foto antiga
+// — que o boot depois carregava como se fosse o estado atual. Agora o espelho leva
+// só o que é operacionalmente crítico e pequeno (mesas, produtos, config). O
+// histórico pesado vive no IndexedDB e na nuvem, e é remesclado na inicialização.
+const MIRROR_HEAVY_KEYS = ['vendas', 'compras', 'producoes', 'consumos', 'auditoria'];
+
+function persistLocalMirror() {
+  try {
+    const mirror = { ...DB, _partial: true };
+    MIRROR_HEAVY_KEYS.forEach(k => { mirror[k] = []; });
+    localStorage.setItem('convpro_db', JSON.stringify(mirror));
+    return true;
+  } catch (e) {
+    // Agora o estouro de cota aparece de verdade, em vez de virar um console.warn
+    // silencioso. O IndexedDB continua sendo a fonte confiável.
+    console.error('Falha ao gravar o espelho local (convpro_db):', e && e.name, e && e.message);
+    if (e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+      if (!window._mirrorQuotaWarned) {
+        window._mirrorQuotaWarned = true;
+        if (typeof showToast === 'function') {
+          showToast('⚠️ Cache local cheio. Vá em Configurações > Backup e limpe vendas antigas.', 'error');
+        }
+      }
+    }
+    return false;
+  }
+}
+
 // Mantém cópias pequenas e independentes das comandas abertas. Esses snapshots
 // não substituem o banco principal e existem para recuperação em caso de uma
 // resposta remota vazia, corrida entre abas ou falha durante a sincronização.
