@@ -928,13 +928,29 @@ function repairDB() {
       if (!m.dtAtualizacao) m.dtAtualizacao = m.dtCriacao;
       if (!m.itens || !Array.isArray(m.itens)) m.itens = [];
 
-      const key = normalizeMesaKey(m.cliente) || m.cliente.trim().toLowerCase();
-      if (!map.has(key)) {
-        map.set(key, m);
+      const nameKey = normalizeMesaKey(m.cliente) || m.cliente.trim().toLowerCase();
+      const idKey = `id:${String(m.id)}`;
+
+      // Duplicata de verdade é o mesmo id. Nome igual com ids diferentes só é
+      // duplicata quando as duas comandas nasceram quase juntas (corrida de
+      // sincronização entre terminais). Grupos diferentes que sentam na mesma
+      // mesa ao longo da noite são comandas distintas: fundir apagaria o pedido
+      // de um deles, que era a causa de "as mesas zeraram do nada".
+      let target = map.get(idKey) || null;
+      if (!target) {
+        const sameName = map.get(`name:${nameKey}`);
+        if (sameName) {
+          const delta = Math.abs(new Date(m.dtCriacao) - new Date(sameName.dtCriacao));
+          if (Number.isFinite(delta) && delta <= 120000) target = sameName;
+        }
+      }
+
+      if (!target) {
+        map.set(idKey, m);
+        if (!map.has(`name:${nameKey}`)) map.set(`name:${nameKey}`, m);
         cleanList.push(m);
       } else {
         // Encontrou duplicada! Funde itens e observações na mesa primária existente
-        const target = map.get(key);
         deduplicatedCount++;
         
         // Funde itens da duplicada na primária
