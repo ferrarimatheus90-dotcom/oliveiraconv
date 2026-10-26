@@ -31,6 +31,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   const btnLogin = document.getElementById('btnThemeToggleLogin');
   if (btnLogin) btnLogin.innerHTML = icon;
 
+  // Abre o cofre ANTES de qualquer coisa que possa salvar. O auto-reparo abaixo
+  // e o login podem chamar saveDB(), e salvar antes de ler o IndexedDB enviaria
+  // para a nuvem um DB incompleto (o espelho do localStorage não tem histórico).
+  await initLocalVault();
+
   // AUTO-REPARO DE IDs DUPLICADOS
   try {
     const idsCache = new Set();
