@@ -82,31 +82,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (document.getElementById('loginRemember')) document.getElementById('loginRemember').checked = true;
   }
 
-  // INDEXEDDB INIT
-  try {
-    const idbData = await loadFromIDB();
-    if (idbData && idbData.vendas) {
-      // Nunca escolhe uma cópia inteira apenas pelo número de vendas. Mescla o
-      // cofre com a memória atual para que uma lista vazia não apague mesas.
-      const restored = mergeRemoteDB(idbData, true);
-      persistLocalMirror();
-      await saveToIDB(DB);
-      if (restored) {
-        console.log('✨ Dados de segurança recuperados do IndexedDB.');
-        if (typeof renderDashboard === 'function' && currentPage === 'dashboard') renderDashboard();
-        if (typeof renderCaixa === 'function' && currentPage === 'caixa') document.getElementById('content').innerHTML = renderCaixa();
-      }
-    } else if (!idbData && DB.vendas) {
-      // Migrate existing localstorage DB to IDB
-      saveToIDB(DB);
-    }
-    const safetyRecovered = await recoverMissingMesasFromSafetySnapshot({ reason: 'inicializacao' });
-    if (safetyRecovered > 0) {
-      console.warn(`🛟 ${safetyRecovered} mesa(s) recuperada(s) automaticamente na inicialização.`);
-    }
-  } catch(e) {
-    console.error("Erro na inicialização do IndexedDB", e);
-  }
+  // O cofre (IndexedDB) é aberto no início do boot, em initLocalVault().
+  // Não pode ficar aqui: o caminho com sessão Supabase ativa — que é o caso
+  // normal do dia a dia — dá `return` antes deste ponto.
 
   // Sincronização automática para Google Sheets a cada 30 minutos
   setInterval(() => {
