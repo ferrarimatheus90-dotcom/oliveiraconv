@@ -38,6 +38,7 @@ function mesa(overrides = {}) {
 const context = {
   DB: emptyDB(),
   localStorage: { setItem() {} },
+  persistLocalMirror() {},
   repairDB() {},
   saveToIDB: async () => true,
   saveDB() {},
@@ -93,6 +94,29 @@ context.mergeRemoteDB({
   mesas_fechadas: []
 }, true);
 assert(context.DB.mesas_abertas.length === 1, 'Uma nova abertura legítima foi bloqueada.');
+
+// Mesa reaberta para OUTRO grupo não pode ser apagada pelo fechamento atrasado
+// da comanda anterior de mesmo nome. Era a causa de "as mesas zeraram do nada".
+context.DB = emptyDB([mesa({
+  id: 11,
+  cliente: 'Mesa 4',
+  dtCriacao: '2026-08-16T20:05:00.000Z',
+  dtAtualizacao: '2026-08-16T20:05:00.000Z'
+})]);
+context.mergeRemoteDB({
+  mesas_abertas: [],
+  mesas_fechadas: [{ id: '10', clienteKey: 'mesa 4', dtFechamento: '2026-08-16T20:10:00.000Z' }]
+}, true);
+assert(context.DB.mesas_abertas.length === 1,
+  'Fechamento de uma comanda antiga apagou a comanda nova de mesmo nome.');
+
+// Tombstone legado (sem id) continua fechando pelo nome.
+context.DB = emptyDB([mesa({ id: 12, cliente: 'Mesa 7' })]);
+context.mergeRemoteDB({
+  mesas_abertas: [],
+  mesas_fechadas: [{ clienteKey: 'mesa 7', dtFechamento: '2026-08-16T20:00:00.000Z' }]
+}, true);
+assert(context.DB.mesas_abertas.length === 0, 'Tombstone legado sem id deixou de fechar a mesa.');
 
 const recoveryStart = appSource.indexOf('async function recoverMissingMesasFromSafetySnapshot');
 const recoveryEnd = appSource.indexOf('window.recuperarMesasDoCofre');
