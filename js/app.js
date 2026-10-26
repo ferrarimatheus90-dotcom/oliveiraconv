@@ -89,7 +89,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       // Nunca escolhe uma cópia inteira apenas pelo número de vendas. Mescla o
       // cofre com a memória atual para que uma lista vazia não apague mesas.
       const restored = mergeRemoteDB(idbData, true);
-      try { localStorage.setItem('convpro_db', JSON.stringify(DB)); } catch(e) { console.warn('LocalStorage full'); }
+      persistLocalMirror();
       await saveToIDB(DB);
       if (restored) {
         console.log('✨ Dados de segurança recuperados do IndexedDB.');
@@ -298,7 +298,7 @@ async function recoverMissingMesasFromSafetySnapshot({ manual = false, reason = 
   if (restored > 0) {
     repairDB();
     await saveToIDB(DB);
-    try { localStorage.setItem('convpro_db', JSON.stringify(DB)); } catch(e) { console.warn('LocalStorage full'); }
+    persistLocalMirror();
     console.warn(`[COFRE DE MESAS] ${restored} mesa(s) recuperada(s). Motivo: ${reason}.`);
   }
 
@@ -524,15 +524,10 @@ async function persistDB(){
   // 1. Salva primariamente no cofre blindado do navegador (IndexedDB)
   await saveToIDB(DB);
   
-  // 2. Tenta salvar no localStorage (Fallback para carregamento rápido)
-  try {
-    try { localStorage.setItem('convpro_db', JSON.stringify(DB)); } catch(e) { console.warn('LocalStorage full'); } 
-  } catch (e) {
-    console.error('CRITICAL: Failed to save to localStorage', e);
-    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-      alert('⚠️ ATENÇÃO: O limite do cache do navegador encheu! Suas vendas foram salvas de forma segura no cofre, mas o sistema está muito pesado.\n\nPor favor, vá agora em CONFIGURAÇÕES > BACKUP e clique no botão vermelho "Limpar Vendas Antigas" para o sistema voltar ao normal.');
-    }
-  }
+  // 2. Espelho leve no localStorage (carregamento rápido do próximo boot).
+  // O tratamento de cota agora vive dentro de persistLocalMirror(); o catch
+  // externo daqui era código morto — o catch interno engolia o erro antes.
+  persistLocalMirror();
   
   // 3. Checa se precisa baixar backup automático no PC
   autoDownloadBackupDiario();
@@ -872,7 +867,7 @@ function mergeRemoteDB(remote, preventSave = false) {
   }
 
   if (hasUpdates) {
-    try { localStorage.setItem('convpro_db', JSON.stringify(DB)); } catch(e) { console.warn('LocalStorage full'); }
+    persistLocalMirror();
     repairDB();
   }
   if (hasMissingInCloud && !preventSave) {
@@ -895,7 +890,7 @@ async function loadDBFromCloud() {
       const updated = mergeRemoteDB(res.data.json_db);
       if (updated) {
         console.log("✨ Banco de dados atualizado com informações da nuvem.");
-        try { localStorage.setItem('convpro_db', JSON.stringify(DB)); } catch(e) { console.warn('LocalStorage full'); }
+        persistLocalMirror();
       }
       return updated;
     }
@@ -1037,7 +1032,7 @@ async function syncToGoogleSheets() {
     if (data && data.success) {
       console.log("✅ Sincronizado com Google Sheets!");
       DB.config.lastSyncDiario = new Date().toISOString();
-      try { localStorage.setItem('convpro_db', JSON.stringify(DB)); } catch(e) { console.warn('LocalStorage full'); }
+      persistLocalMirror();
       await sb.from('config_app').upsert({ id: 1, json_db: DB, updated_at: new Date().toISOString() });
     } else {
       console.warn("⚠️ Google Sheets recusou a sincronização:", data && data.error ? data.error : 'Erro desconhecido');
@@ -1563,7 +1558,7 @@ async function finishLogin(user, rem){
           const hasUpdates = mergeRemoteDB(remoteDb);
           if (hasUpdates) {
               console.log("✨ Banco de dados mesclado via Google Sheets (fallback).");
-              try { localStorage.setItem('convpro_db', JSON.stringify(DB)); } catch(e) { console.warn('LocalStorage full'); }
+              persistLocalMirror();
               if (typeof sb !== 'undefined') {
                  sb.from('config_app').upsert({ id: 1, json_db: DB, updated_at: new Date().toISOString() });
               }
@@ -4985,7 +4980,7 @@ function importarBackup(){
       DB = dbParsed;
       
       // Salva no localStorage local imediatamente para garantir disponibilidade sem depender da nuvem
-      try { localStorage.setItem('convpro_db', JSON.stringify(DB)); } catch(e) { console.warn('LocalStorage full'); }
+      persistLocalMirror();
       
       auditLog('BACKUP_IMPORT', 'Restauração de backup realizada');
       showToast('✅ Banco de dados restaurado com sucesso!', 'success');
