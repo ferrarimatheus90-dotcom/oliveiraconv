@@ -640,12 +640,22 @@ function mesaDate(value) {
 }
 
 function isMesaClosedByTombstone(mesa, tombstones = DB.mesas_fechadas || []) {
-  const idKey = mesa?.id != null ? `id:${String(mesa.id)}` : '';
+  const mesaId = mesa?.id != null ? String(mesa.id) : '';
   const nameKey = normalizeMesaKey(mesa?.cliente || '');
   const closedAt = tombstones.reduce((latest, tombstone) => {
-    const sameId = idKey && mesaTombstoneKey(tombstone) === idKey;
-    const sameName = nameKey && normalizeMesaKey(tombstone?.clienteKey || tombstone?.cliente || '') === nameKey;
-    return (sameId || sameName) ? Math.max(latest, tombstoneDate(tombstone)) : latest;
+    const tombId = tombstone?.id != null ? String(tombstone.id) : '';
+    let matches;
+    if (mesaId && tombId) {
+      // Ambos identificados: somente o MESMO id fecha a comanda. Nome igual não
+      // basta — "Mesa 4" reaberta para outro grupo é outra comanda, e um terminal
+      // atrasado que fecha a comanda anterior não pode apagar a nova.
+      matches = mesaId === tombId;
+    } else {
+      // Tombstone ou mesa sem id (dados legados): só então cai para o nome.
+      matches = !!nameKey &&
+        normalizeMesaKey(tombstone?.clienteKey || tombstone?.cliente || '') === nameKey;
+    }
+    return matches ? Math.max(latest, tombstoneDate(tombstone)) : latest;
   }, 0);
   return closedAt > 0 && closedAt >= mesaDate(mesa);
 }
