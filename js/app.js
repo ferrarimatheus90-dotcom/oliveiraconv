@@ -2110,12 +2110,7 @@ function renderBillingNoticeFullscreen() {
     apoio = `Você tem até ${prazoBR} para regularizar. Após essa data o sistema será suspenso.`;
   }
 
-  const overlay = document.createElement('div');
-  overlay.id = 'billingNoticeFullscreen';
-  overlay.style.cssText = `position:fixed; inset:0; z-index:99999; display:flex; align-items:center;
-    justify-content:center; padding:24px; background:rgba(8,4,4,.88); backdrop-filter:blur(4px);`;
-
-  overlay.innerHTML = `
+  return `
     <div class="billing-notice${BILLING_NOTICE.piscar ? ' is-blinking' : ''}"
          style="width:100%; max-width:560px; text-align:center; padding:38px 30px;
                 border:3px solid rgba(229,57,53,.95); border-radius:16px;
