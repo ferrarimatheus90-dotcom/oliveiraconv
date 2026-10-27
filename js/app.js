@@ -1956,6 +1956,74 @@ const PAGE_TITLES={
   produtos:'Produtos',usuarios:'Usuários',relatorios:'Relatórios',
   financeiro:'Financeiro',auditoria:'Auditoria',caixa:'Caixa do Dia',backup:'Backup de Dados'
 };
+// ===================== AVISO DE PENDÊNCIA FINANCEIRA =====================
+// Para ligar: trocar `ativo` para true, preencher os campos e dar push.
+// O site (Hostinger) e o app desktop pegam a mudança sozinhos, sem reinstalar.
+// Para desligar: `ativo: false` e push. Nada mais precisa ser mexido.
+//
+// `mostrarPara` existe por um motivo sério: o aviso NUNCA deve aparecer para
+// 'funcionario'. A tela do caixa é lida por funcionários e às vezes por
+// clientes, e expor a situação financeira do dono a terceiros se vira contra
+// quem cobra. Deixe apenas ['admin'].
+const BILLING_NOTICE = {
+  ativo: false,
+  valor: '',            // ex.: 'R$ 1.200,00'
+  referencia: '',       // ex.: 'Manutenção — outubro/2026'
+  vencimento: '',       // ex.: '10/10/2026'
+  pagamento: '',        // ex.: 'PIX 000.000.000-00 (Matheus Ferrari)'
+  contato: '',          // ex.: '(00) 00000-0000'
+  mostrarPara: ['admin']
+};
+
+const BILLING_NOTICE_DISMISS_KEY = 'convpro_billing_notice_dismissed';
+
+function billingNoticeVisible() {
+  if (!BILLING_NOTICE.ativo) return false;
+  if (!currentUser || !BILLING_NOTICE.mostrarPara.includes(currentUser.role)) return false;
+  try {
+    if (sessionStorage.getItem(BILLING_NOTICE_DISMISS_KEY) === '1') return false;
+  } catch (e) { /* sessionStorage bloqueado: mostra o aviso */ }
+  return true;
+}
+
+window.dismissBillingNotice = function() {
+  try { sessionStorage.setItem(BILLING_NOTICE_DISMISS_KEY, '1'); } catch (e) {}
+  document.querySelectorAll('.billing-notice').forEach(el => el.remove());
+};
+
+// Faixa discreta e factual. Sem vermelho piscando, sem contagem regressiva e
+// sem bloquear nada: o sistema continua 100% funcional. Texto seco cobra melhor.
+function renderBillingNotice() {
+  if (!billingNoticeVisible()) return '';
+  const linha = [
+    BILLING_NOTICE.referencia,
+    BILLING_NOTICE.valor,
+    BILLING_NOTICE.vencimento ? `vencimento ${BILLING_NOTICE.vencimento}` : ''
+  ].filter(Boolean).join(' · ');
+
+  const detalhe = [
+    BILLING_NOTICE.pagamento,
+    BILLING_NOTICE.contato ? `Dúvidas: ${BILLING_NOTICE.contato}` : ''
+  ].filter(Boolean).join(' — ');
+
+  return `
+  <div class="billing-notice" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; margin-bottom:16px;
+       border:1px solid var(--border); border-left:3px solid #c9a227; border-radius:8px; background:rgba(201,162,39,0.06);">
+    <div style="flex:1; min-width:0;">
+      <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:3px;">Pagamento em aberto</div>
+      ${linha ? `<div style="font-size:12px; color:var(--text2);">${linha}</div>` : ''}
+      ${detalhe ? `<div style="font-size:12px; color:var(--text2); margin-top:3px;">${detalhe}</div>` : ''}
+    </div>
+    <button onclick="dismissBillingNotice()" title="Ocultar até o próximo acesso"
+      style="background:none; border:none; color:var(--text2); font-size:16px; cursor:pointer; line-height:1; padding:2px 4px;">&times;</button>
+  </div>`;
+}
+
+function applyBillingNotice(container) {
+  if (!container || !billingNoticeVisible()) return;
+  container.insertAdjacentHTML('afterbegin', renderBillingNotice());
+}
+
 function navigate(page){
   if(!['admin','dev'].includes(currentUser.role)&&page!=='vendas')page='vendas';
   if(currentUser.role==='admin'&&(page==='usuarios'||page==='backup'))page='dashboard';

@@ -139,7 +139,7 @@ vm.runInContext(appSource.slice(recoveryStart, recoveryEnd), context);
   restored = await context.recoverMissingMesasFromSafetySnapshot({ reason: 'teste' });
   assert(restored === 0 && context.DB.mesas_abertas.length === 0, 'Cofre ressuscitou mesa finalizada.');
 
-  console.log('OK: 7 cenários críticos de sincronização e recuperação passaram.');
+  console.log('OK: 9 cenários críticos de sincronização e recuperação passaram.');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;
