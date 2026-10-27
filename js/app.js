@@ -1672,6 +1672,7 @@ async function finishLogin(user, rem){
 
   navigate('dashboard');
   auditLog('LOGIN','Acesso ao sistema');
+  showBillingNoticeFullscreen();
   
   // Sincronização em tempo real entre abas (guias) do navegador
   window.addEventListener('storage', async (e) => {
