@@ -1,6 +1,6 @@
-// Gera uma prévia do aviso de pendência financeira usando a FUNÇÃO REAL do
-// sistema (js/app.js), para que o que aparece na prévia seja exatamente o que
-// o cliente verá. Nada aqui altera o sistema nem publica o aviso.
+// Gera uma prévia do aviso de pendência financeira usando as FUNÇÕES REAIS do
+// sistema (js/app.js), para que o que aparece aqui seja exatamente o que o
+// cliente verá. Nada neste arquivo altera o sistema nem publica o aviso.
 //
 // Uso:  node scratch/gerar-previa-aviso.js
 // Saída: scratch/previa-aviso.html
@@ -16,15 +16,17 @@ const start = src.indexOf('const BILLING_NOTICE = {');
 const end = src.indexOf('function navigate(page){');
 if (start < 0 || end < 0) throw new Error('Bloco do aviso não encontrado em js/app.js');
 
-// Configuração usada só na prévia. O arquivo js/app.js continua com ativo:false.
+// Configuração usada só na prévia. Em js/app.js o aviso segue com ativo:false.
+// Sem valor e sem PIX: o cliente já sabe quanto deve — o aviso só precisa
+// deixar claro que existe pendência e que há prazo.
 const CONFIG_PREVIA = {
   ativo: true,
   mensagem: 'Você tem pendências financeiras com a plataforma.',
   prazo: '2026-10-31',
-  valor: 'R$ 1.200,00',
-  referencia: 'Saldo do contrato de implantação',
-  pagamento: 'PIX 000.000.000-00 (Matheus Ferrari)',
-  contato: '(00) 00000-0000',
+  valor: '',
+  referencia: '',
+  pagamento: '',
+  contato: '',
   piscar: true,
   mostrarPara: ['admin']
 };
@@ -46,13 +48,23 @@ function renderComDataFalsa(dataSimulada) {
     window: {},
     console: { log() {}, warn() {}, error() {} },
     Date: DataFake,
-    isNaN, Math, JSON
+    isNaN, Math, JSON, Number, String
   };
 
   vm.createContext(ctx);
-  vm.runInContext(src.slice(start, end) + '\n;globalThis.BILLING_NOTICE = BILLING_NOTICE;', ctx);
+  vm.runInContext(
+    src.slice(start, end) +
+    '\n;globalThis.BILLING_NOTICE = BILLING_NOTICE;' +
+    '\n;globalThis.BILLING_FULLSCREEN_BACKDROP = BILLING_FULLSCREEN_BACKDROP;',
+    ctx
+  );
   Object.assign(ctx.BILLING_NOTICE, CONFIG_PREVIA);
-  return ctx.renderBillingNotice();
+
+  return {
+    telaCheia: ctx.renderBillingNoticeFullscreen(),
+    faixa: ctx.renderBillingNotice(),
+    fundo: ctx.BILLING_FULLSCREEN_BACKDROP || ''
+  };
 }
 
 const CENARIOS = [
@@ -61,11 +73,27 @@ const CENARIOS = [
   { titulo: 'Domingo 01/11 — prazo encerrado',                    data: '2026-11-01T10:00:00' }
 ];
 
-const blocos = CENARIOS.map(c => `
+const blocos = CENARIOS.map(c => {
+  const r = renderComDataFalsa(c.data);
+  // Reaproveita o fundo real da tela cheia, só trocando fixed por relative
+  // para caber dentro desta página de prévia.
+  const fundoPalco = r.fundo
+    .replace('position:fixed; inset:0;', 'position:relative;')
+    .replace('z-index:99999;', '');
+
+  return `
     <section class="cenario">
       <h2>${c.titulo}</h2>
-      <div class="palco">${renderComDataFalsa(c.data)}</div>
-    </section>`).join('\n');
+
+      <h3>1 · Ao entrar no sistema — ocupa a tela inteira</h3>
+      <div style="${fundoPalco} border-radius:12px; min-height:470px;">
+        ${r.telaCheia}
+      </div>
+
+      <h3>2 · Depois do &ldquo;Entendi&rdquo; — faixa fixa em todas as páginas</h3>
+      <div class="palco">${r.faixa}</div>
+    </section>`;
+}).join('\n');
 
 // Reaproveita o CSS real do sistema para as variáveis de cor e os dois temas.
 const estilosApp = fs.readFileSync(path.join(ROOT, 'css', 'style.css'), 'utf8');
@@ -87,10 +115,11 @@ ${estilosApp}
                   margin-bottom:26px; font-size:13px; color:var(--text2); background:rgba(127,127,127,.06); }
   h1 { font-size: 20px; margin: 0 0 6px; }
   .sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
-  .cenario { margin-bottom: 30px; }
-  .cenario h2 { font-size: 13px; font-weight: 600; color: var(--text2); margin: 0 0 10px;
+  .cenario { margin-bottom: 44px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .cenario h2 { font-size: 13px; font-weight: 700; color: var(--text); margin: 0 0 4px;
                 text-transform: uppercase; letter-spacing: .04em; }
-  .palco { border:1px dashed var(--border); border-radius:10px; padding:18px; background:var(--card, transparent); }
+  .cenario h3 { font-size: 12px; font-weight: 600; color: var(--text2); margin: 18px 0 8px; opacity: .85; }
+  .palco { border:1px dashed var(--border); border-radius:10px; padding:18px; }
   .barra { display:flex; gap:10px; align-items:center; margin-bottom:22px; }
   button.tema { font: inherit; font-size:13px; padding:8px 14px; border-radius:8px; cursor:pointer;
                 border:1px solid var(--border); background:transparent; color:var(--text); }
@@ -104,12 +133,12 @@ ${estilosApp}
 <body>
   <div class="wrap">
     <h1>Prévia — Aviso de pendência financeira</h1>
-    <div class="sub">Gerado a partir da função real do sistema. Nada aqui está publicado.</div>
+    <div class="sub">Gerado a partir das funções reais do sistema. Nada aqui está publicado.</div>
 
     <div class="aviso-previa">
       Em <code>js/app.js</code> o aviso está com <code>ativo: false</code> — não aparece para ninguém.
       Esta página mostra como ficaria se fosse ligado. O aviso aparece <strong>somente</strong> para o
-      login do dono (<code>admin</code>); funcionário nunca vê.
+      login do dono (<code>admin</code>); funcionário nunca vê. Sem valor e sem PIX, como você pediu.
     </div>
 
     <div class="barra">
