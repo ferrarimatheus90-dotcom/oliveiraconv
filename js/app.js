@@ -1967,7 +1967,7 @@ const PAGE_TITLES={
 // clientes, e expor a situação financeira do dono a terceiros se vira contra
 // quem cobra. Deixe apenas ['admin'].
 const BILLING_NOTICE = {
-  ativo: false,                   // <<< trocar para true é o que publica o aviso
+  ativo: true,                   // <<< trocar para true é o que publica o aviso
   mensagem: 'Você tem pendências financeiras com a plataforma.',
   prazo: '2026-10-31',            // data limite (AAAA-MM-DD). O contador é automático.
   valor: '',                      // ex.: 'R$ 1.200,00'

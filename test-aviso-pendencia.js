@@ -33,8 +33,10 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-// Estado de fábrica: desligado.
-assert(context.BILLING_NOTICE.ativo === false, 'O aviso não está desligado por padrão.');
+// Desligado some para todo mundo. (Não fixa o valor publicado de `ativo`: ele
+// é ligado e desligado conforme a cobrança, e travá-lo aqui quebraria o teste
+// toda vez que o aviso fosse ativado de propósito.)
+context.BILLING_NOTICE.ativo = false;
 context.currentUser = { role: 'admin' };
 assert(context.billingNoticeVisible() === false, 'O aviso apareceu estando desligado.');
 
