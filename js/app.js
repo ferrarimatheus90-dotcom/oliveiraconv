@@ -2077,6 +2077,71 @@ function applyBillingNotice(container) {
   container.insertAdjacentHTML('afterbegin', renderBillingNotice());
 }
 
+// Tela cheia mostrada a cada entrada no sistema. Não bloqueia o trabalho: tem
+// botão para seguir. Depois de fechada, a faixa no topo continua em todas as
+// páginas, então o aviso não some — só deixa de impedir a visão.
+window.fecharBillingNoticeFullscreen = function() {
+  const el = document.getElementById('billingNoticeFullscreen');
+  if (el) el.remove();
+};
+
+function showBillingNoticeFullscreen() {
+  if (!billingNoticeVisible()) return;
+  ensureBillingNoticeStyles();
+  if (document.getElementById('billingNoticeFullscreen')) return;
+
+  const dias = billingNoticeDiasRestantes();
+  const prazoBR = billingNoticePrazoBR();
+  const vencido = dias !== null && dias < 0;
+
+  let destaque, apoio;
+  if (vencido) {
+    destaque = 'PRAZO ENCERRADO';
+    apoio = `O prazo terminou em ${prazoBR}. O sistema está sujeito a suspensão.`;
+  } else if (dias === null) {
+    destaque = 'REGULARIZE';
+    apoio = 'Regularize para evitar a suspensão do sistema.';
+  } else if (dias === 0) {
+    destaque = 'ÚLTIMO DIA';
+    apoio = `Hoje é o último dia do prazo (${prazoBR}). Após essa data o sistema será suspenso.`;
+  } else {
+    destaque = `${dias} DIA${dias > 1 ? 'S' : ''}`;
+    apoio = `Você tem até ${prazoBR} para regularizar. Após essa data o sistema será suspenso.`;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'billingNoticeFullscreen';
+  overlay.style.cssText = `position:fixed; inset:0; z-index:99999; display:flex; align-items:center;
+    justify-content:center; padding:24px; background:rgba(8,4,4,.88); backdrop-filter:blur(4px);`;
+
+  overlay.innerHTML = `
+    <div class="billing-notice${BILLING_NOTICE.piscar ? ' is-blinking' : ''}"
+         style="width:100%; max-width:560px; text-align:center; padding:38px 30px;
+                border:3px solid rgba(229,57,53,.95); border-radius:16px;
+                background:linear-gradient(180deg, rgba(40,10,10,.98), rgba(22,8,8,.98));">
+      <div style="font-size:60px; line-height:1; margin-bottom:14px;">⚠️</div>
+      <div style="font-size:13px; font-weight:700; letter-spacing:.14em; color:#ff8a80; margin-bottom:10px;">
+        PENDÊNCIA FINANCEIRA
+      </div>
+      <div style="font-size:23px; font-weight:800; color:#fff; line-height:1.3; margin-bottom:20px;">
+        ${BILLING_NOTICE.mensagem}
+      </div>
+      <div style="font-size:46px; font-weight:900; color:#e53935; line-height:1; margin-bottom:10px;">
+        ${destaque}
+      </div>
+      <div style="font-size:15px; color:#ffcdd2; line-height:1.5; margin-bottom:28px;">
+        ${apoio}
+      </div>
+      <button onclick="fecharBillingNoticeFullscreen()"
+        style="font:inherit; font-size:15px; font-weight:700; color:#fff; cursor:pointer;
+               background:#e53935; border:none; border-radius:10px; padding:13px 40px;">
+        Entendi
+      </button>
+    </div>`;
+
+  document.body.appendChild(overlay);
+}
+
 function navigate(page){
   if(!['admin','dev'].includes(currentUser.role)&&page!=='vendas')page='vendas';
   if(currentUser.role==='admin'&&(page==='usuarios'||page==='backup'))page='dashboard';
