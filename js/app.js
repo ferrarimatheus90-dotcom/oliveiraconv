@@ -2086,10 +2086,10 @@ window.fecharBillingNoticeFullscreen = function() {
   if (el) el.remove();
 };
 
-function showBillingNoticeFullscreen() {
-  if (!billingNoticeVisible()) return;
-  ensureBillingNoticeStyles();
-  if (document.getElementById('billingNoticeFullscreen')) return;
+// Separada de showBillingNoticeFullscreen() para que a prévia consiga montar
+// exatamente o mesmo cartão sem precisar de um navegador.
+function renderBillingNoticeFullscreen() {
+  if (!billingNoticeVisible()) return '';
 
   const dias = billingNoticeDiasRestantes();
   const prazoBR = billingNoticePrazoBR();
