@@ -1966,12 +1966,14 @@ const PAGE_TITLES={
 // clientes, e expor a situação financeira do dono a terceiros se vira contra
 // quem cobra. Deixe apenas ['admin'].
 const BILLING_NOTICE = {
-  ativo: false,
-  valor: '',            // ex.: 'R$ 1.200,00'
-  referencia: '',       // ex.: 'Manutenção — outubro/2026'
-  vencimento: '',       // ex.: '10/10/2026'
-  pagamento: '',        // ex.: 'PIX 000.000.000-00 (Matheus Ferrari)'
-  contato: '',          // ex.: '(00) 00000-0000'
+  ativo: false,                   // <<< trocar para true é o que publica o aviso
+  mensagem: 'Você tem pendências financeiras com a plataforma.',
+  prazo: '2026-10-31',            // data limite (AAAA-MM-DD). O contador é automático.
+  valor: '',                      // ex.: 'R$ 1.200,00'
+  referencia: '',                 // ex.: 'Saldo do contrato de implantação'
+  pagamento: '',                  // ex.: 'PIX 000.000.000-00 (Matheus Ferrari)'
+  contato: '',                    // ex.: '(00) 00000-0000'
+  piscar: true,
   mostrarPara: ['admin']
 };
 
