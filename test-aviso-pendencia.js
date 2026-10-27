@@ -63,4 +63,45 @@ const html = context.renderBillingNotice();
 assert(!/modal|overlay/i.test(html), 'O aviso virou modal/overlay e bloqueia a tela.');
 assert(html.includes('R$ 1.200,00'), 'O aviso não mostra o valor em aberto.');
 
-console.log('OK: 9 regras do aviso de pendência financeira passaram.');
+// ---- Contador de prazo -----------------------------------------------------
+// Roda o bloco com uma data simulada para conferir os três estados.
+function chamadaEm(dataSimulada, prazo) {
+  const DataReal = Date;
+  class DataFake extends DataReal {
+    constructor(...args) {
+      if (args.length === 0) super(dataSimulada);
+      else super(...args);
+    }
+    static now() { return new DataReal(dataSimulada).getTime(); }
+  }
+  const ctx = {
+    currentUser: { role: 'admin' },
+    sessionStorage: { getItem: () => null, setItem() {} },
+    document: { getElementById: () => null, querySelectorAll: () => [] },
+    window: {},
+    console: { log() {}, warn() {}, error() {} },
+    Date: DataFake, isNaN, Math, JSON, Number, String
+  };
+  vm.createContext(ctx);
+  vm.runInContext(src.slice(start, end) + '\n;globalThis.BILLING_NOTICE = BILLING_NOTICE;', ctx);
+  ctx.BILLING_NOTICE.ativo = true;
+  ctx.BILLING_NOTICE.prazo = prazo;
+  return ctx.renderBillingNotice();
+}
+
+const PRAZO = '2026-10-31';
+
+assert(chamadaEm('2026-10-29T10:00:00', PRAZO).includes('em até 2 dias'),
+  'Contador errado dois dias antes do prazo.');
+
+assert(chamadaEm('2026-10-31T10:00:00', PRAZO).includes('Último dia do prazo'),
+  'O último dia do prazo não foi reconhecido.');
+
+// Era o bug do -0: o dia seguinte ao prazo aparecia como "último dia".
+const depois = chamadaEm('2026-11-01T10:00:00', PRAZO);
+assert(depois.includes('Prazo encerrado'),
+  'Prazo vencido não foi reconhecido (regressão do -0).');
+assert(!depois.includes('Último dia'),
+  'Prazo vencido ainda aparece como último dia.');
+
+console.log('OK: 13 regras do aviso de pendência financeira passaram.');
