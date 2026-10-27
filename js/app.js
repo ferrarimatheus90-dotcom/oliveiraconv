@@ -2134,7 +2134,21 @@ function renderBillingNoticeFullscreen() {
         Entendi
       </button>
     </div>`;
+}
 
+const BILLING_FULLSCREEN_BACKDROP =
+  'position:fixed; inset:0; z-index:99999; display:flex; align-items:center; ' +
+  'justify-content:center; padding:24px; background:rgba(8,4,4,.88); backdrop-filter:blur(4px);';
+
+function showBillingNoticeFullscreen() {
+  if (!billingNoticeVisible()) return;
+  ensureBillingNoticeStyles();
+  if (document.getElementById('billingNoticeFullscreen')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'billingNoticeFullscreen';
+  overlay.style.cssText = BILLING_FULLSCREEN_BACKDROP;
+  overlay.innerHTML = renderBillingNoticeFullscreen();
   document.body.appendChild(overlay);
 }
 
