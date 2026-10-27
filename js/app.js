@@ -2048,6 +2048,7 @@ function navigate(page){
     case 'backup': c.innerHTML=renderBackup();break;
     default: c.innerHTML='<p>Página não encontrada</p>';
   }
+  applyBillingNotice(c);
 }
 
 // ===================== HELPERS =====================
