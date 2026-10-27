@@ -1997,10 +1997,17 @@ window.dismissBillingNotice = function() {
 // sozinho — não precisa editar o código todo dia.
 function billingNoticeDiasRestantes() {
   if (!BILLING_NOTICE.prazo) return null;
-  const limite = new Date(BILLING_NOTICE.prazo + 'T23:59:59');
+  const partes = String(BILLING_NOTICE.prazo).split('-').map(Number);
+  if (partes.length !== 3 || partes.some(n => !Number.isFinite(n))) return null;
+
+  // Compara datas de calendário, não instantes. Subtrair timestamps fazia o dia
+  // seguinte ao prazo virar -0 (que não é < 0) e o aviso dizia "último dia"
+  // quando o prazo já havia acabado.
+  const limite = new Date(partes[0], partes[1] - 1, partes[2]);
+  const agora = new Date();
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
   if (isNaN(limite.getTime())) return null;
-  const hoje = new Date();
-  return Math.ceil((limite.getTime() - hoje.getTime()) / 86400000);
+  return Math.round((limite.getTime() - hoje.getTime()) / 86400000);
 }
 
 function billingNoticePrazoBR() {
