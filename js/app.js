@@ -1993,36 +1993,80 @@ window.dismissBillingNotice = function() {
   document.querySelectorAll('.billing-notice').forEach(el => el.remove());
 };
 
-// Faixa discreta e factual. Sem vermelho piscando, sem contagem regressiva e
-// sem bloquear nada: o sistema continua 100% funcional. Texto seco cobra melhor.
+// Dias que faltam até o prazo. Recalcula a cada render, então o contador anda
+// sozinho — não precisa editar o código todo dia.
+function billingNoticeDiasRestantes() {
+  if (!BILLING_NOTICE.prazo) return null;
+  const limite = new Date(BILLING_NOTICE.prazo + 'T23:59:59');
+  if (isNaN(limite.getTime())) return null;
+  const hoje = new Date();
+  return Math.ceil((limite.getTime() - hoje.getTime()) / 86400000);
+}
+
+function billingNoticePrazoBR() {
+  if (!BILLING_NOTICE.prazo) return '';
+  const [a, m, d] = BILLING_NOTICE.prazo.split('-');
+  return (a && m && d) ? `${d}/${m}/${a}` : '';
+}
+
+// A pulsação fica em 1,4s por ciclo de propósito. Piscar acima de 3 vezes por
+// segundo é risco real de convulsão em quem tem epilepsia fotossensível; nesse
+// ritmo o aviso chama atenção sem entrar nessa faixa.
+function ensureBillingNoticeStyles() {
+  if (typeof document === 'undefined' || document.getElementById('billingNoticeStyles')) return;
+  const style = document.createElement('style');
+  style.id = 'billingNoticeStyles';
+  style.textContent = `
+@keyframes billingPulse {
+  0%, 100% { border-color: rgba(229,57,53,.95); box-shadow: 0 0 16px rgba(229,57,53,.40); }
+  50%      { border-color: rgba(229,57,53,.35); box-shadow: 0 0 0 rgba(229,57,53,0); }
+}
+.billing-notice.is-blinking { animation: billingPulse 1.4s ease-in-out infinite; }`;
+  document.head.appendChild(style);
+}
+
 function renderBillingNotice() {
   if (!billingNoticeVisible()) return '';
-  const linha = [
-    BILLING_NOTICE.referencia,
-    BILLING_NOTICE.valor,
-    BILLING_NOTICE.vencimento ? `vencimento ${BILLING_NOTICE.vencimento}` : ''
-  ].filter(Boolean).join(' · ');
 
+  const dias = billingNoticeDiasRestantes();
+  const prazoBR = billingNoticePrazoBR();
+  const vencido = dias !== null && dias < 0;
+
+  let chamada;
+  if (vencido) {
+    chamada = `Prazo encerrado em ${prazoBR}. O sistema está sujeito a suspensão.`;
+  } else if (dias === null) {
+    chamada = 'Regularize para evitar a suspensão do sistema.';
+  } else if (dias === 0) {
+    chamada = `Último dia do prazo (${prazoBR}). Regularize hoje para não haver suspensão do sistema.`;
+  } else {
+    chamada = `Regularize em até ${dias} dia${dias > 1 ? 's' : ''} — até ${prazoBR} — para não haver suspensão do sistema.`;
+  }
+
+  const linha = [BILLING_NOTICE.referencia, BILLING_NOTICE.valor].filter(Boolean).join(' · ');
   const detalhe = [
     BILLING_NOTICE.pagamento,
     BILLING_NOTICE.contato ? `Dúvidas: ${BILLING_NOTICE.contato}` : ''
   ].filter(Boolean).join(' — ');
 
+  const piscando = BILLING_NOTICE.piscar ? ' is-blinking' : '';
+
   return `
-  <div class="billing-notice" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; margin-bottom:16px;
-       border:1px solid var(--border); border-left:3px solid #c9a227; border-radius:8px; background:rgba(201,162,39,0.06);">
+  <div class="billing-notice${piscando}" style="display:flex; align-items:flex-start; gap:12px; padding:14px 16px; margin-bottom:18px;
+       border:2px solid rgba(229,57,53,.95); border-radius:10px; background:rgba(229,57,53,0.08);">
+    <div style="font-size:20px; line-height:1.1;">⚠️</div>
     <div style="flex:1; min-width:0;">
-      <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:3px;">Pagamento em aberto</div>
-      ${linha ? `<div style="font-size:12px; color:var(--text2);">${linha}</div>` : ''}
+      <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:4px;">${BILLING_NOTICE.mensagem}</div>
+      <div style="font-size:13px; font-weight:600; color:#e53935;">${chamada}</div>
+      ${linha ? `<div style="font-size:12px; color:var(--text2); margin-top:6px;">${linha}</div>` : ''}
       ${detalhe ? `<div style="font-size:12px; color:var(--text2); margin-top:3px;">${detalhe}</div>` : ''}
     </div>
-    <button onclick="dismissBillingNotice()" title="Ocultar até o próximo acesso"
-      style="background:none; border:none; color:var(--text2); font-size:16px; cursor:pointer; line-height:1; padding:2px 4px;">&times;</button>
   </div>`;
 }
 
 function applyBillingNotice(container) {
   if (!container || !billingNoticeVisible()) return;
+  ensureBillingNoticeStyles();
   container.insertAdjacentHTML('afterbegin', renderBillingNotice());
 }
 
