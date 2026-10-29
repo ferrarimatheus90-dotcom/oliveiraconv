@@ -116,4 +116,4 @@ assert(depois.includes('Prazo encerrado'),
 assert(!depois.includes('Último dia'),
   'Prazo vencido ainda aparece como último dia.');
 
-console.log('OK: 13 regras do aviso de pendência financeira passaram.');
+console.log('OK: 17 regras do aviso de pendência financeira passaram.');
