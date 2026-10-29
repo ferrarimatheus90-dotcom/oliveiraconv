@@ -1975,7 +1975,10 @@ const BILLING_NOTICE = {
   pagamento: '',                  // ex.: 'PIX 000.000.000-00 (Matheus Ferrari)'
   contato: '',                    // ex.: '(00) 00000-0000'
   piscar: true,
-  mostrarPara: ['admin']
+  // Todos os perfis. No Modo Local (offline) o papel vem do que a pessoa digita
+  // no campo de usuário, então limitar a ['admin'] fazia o aviso depender do
+  // login usado. Com os três, ele aparece em qualquer entrada no sistema.
+  mostrarPara: ['admin', 'dev', 'funcionario']
 };
 
 const BILLING_NOTICE_DISMISS_KEY = 'convpro_billing_notice_dismissed';
