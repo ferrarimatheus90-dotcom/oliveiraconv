@@ -44,12 +44,22 @@ assert(context.billingNoticeVisible() === false, 'O aviso apareceu estando desli
 context.BILLING_NOTICE.ativo = true;
 context.BILLING_NOTICE.valor = 'R$ 1.200,00';
 
-context.currentUser = { role: 'admin' };
-assert(context.billingNoticeVisible() === true, 'O dono (admin) não viu o aviso.');
+// Quem vê é decidido por `mostrarPara`. O teste cobre o mecanismo, não a
+// política publicada — ela muda conforme a cobrança.
+context.BILLING_NOTICE.mostrarPara = ['admin', 'dev', 'funcionario'];
+['admin', 'dev', 'funcionario'].forEach(papel => {
+  context.currentUser = { role: papel };
+  assert(context.billingNoticeVisible() === true, `O perfil "${papel}" não viu o aviso estando liberado.`);
+});
 
+// Restringindo, quem está fora da lista deixa de ver.
+context.BILLING_NOTICE.mostrarPara = ['admin'];
 context.currentUser = { role: 'funcionario' };
-assert(context.billingNoticeVisible() === false, 'REGRA CRÍTICA VIOLADA: funcionário viu o aviso de cobrança.');
+assert(context.billingNoticeVisible() === false, 'mostrarPara não bloqueou um perfil fora da lista.');
+context.currentUser = { role: 'admin' };
+assert(context.billingNoticeVisible() === true, 'mostrarPara bloqueou um perfil que está na lista.');
 
+context.BILLING_NOTICE.mostrarPara = ['admin', 'dev', 'funcionario'];
 context.currentUser = null;
 assert(context.billingNoticeVisible() === false, 'O aviso apareceu sem usuário logado.');
 
