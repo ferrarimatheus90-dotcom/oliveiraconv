@@ -1976,7 +1976,7 @@ const PAGE_TITLES={
 const SYSTEM_SUSPENDED = {
   ativo: true,
   titulo: 'Sistema suspenso',
-  motivo: 'Suspensão por falta de pagamento, conforme contrato.',
+  motivo: 'Suspensão por falta de pagamento.',
   instrucao: 'Regularize o pagamento para reativar o acesso.',
   contato: '',
   permitirExportacao: true
