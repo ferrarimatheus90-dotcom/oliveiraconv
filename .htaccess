@@ -1,0 +1,21 @@
+# O deploy publica a raiz do repositório inteira no site. Sem este arquivo,
+# os dumps do banco, os backups e os arquivos internos ficam baixáveis por
+# qualquer pessoa — e os nomes estão listados no repositório público.
+#
+# O sistema precisa apenas de: index.html, cardapio.html, css/, js/ e img/.
+# Tudo abaixo responde 404, que nem revela que o arquivo existe.
+
+# Dumps, backups, documentação e scripts, por extensão
+RedirectMatch 404 (?i)\.(json|sql|md|py|sh|gs|zip|tar|gz|tgz|bak|log|pdf|lock|env)$
+
+# Pastas que não fazem parte do site publicado
+RedirectMatch 404 (?i)^/(desktop|docs|scratch|oliveiraconv-main|node_modules)(/|$)
+
+# Arquivos e pastas ocultos (.git, .github, .claude, .gitignore)
+RedirectMatch 404 (?i)/\.(?!well-known)
+
+# Scripts soltos na raiz que não pertencem ao sistema
+RedirectMatch 404 (?i)^/(test-[^/]*\.js|temp_old_app\.js|local-server\.js)$
+
+# Sem listagem de diretório
+Options -Indexes
