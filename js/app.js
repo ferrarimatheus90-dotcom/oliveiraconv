@@ -1957,6 +1957,98 @@ const PAGE_TITLES={
   produtos:'Produtos',usuarios:'Usuários',relatorios:'Relatórios',
   financeiro:'Financeiro',auditoria:'Auditoria',caixa:'Caixa do Dia',backup:'Backup de Dados'
 };
+// ===================== SUSPENSÃO DO SISTEMA =====================
+// Bloqueio total por falta de pagamento, conforme cláusula contratual.
+// Para liberar quando o pagamento for feito: `ativo: false` e push.
+//
+// Roda antes do login, então bloqueia também o "Modo Local (Offline)" — este
+// sistema não tem service worker, a página sempre vem do servidor.
+//
+// `permitirExportacao` mantém o botão que baixa os dados do navegador. Os dados
+// de venda são do cliente, e hoje existem em um único lugar: o IndexedDB
+// daquela máquina (o Supabase está fora, não há backup na nuvem). Suspender o
+// serviço é uma coisa; deixar o dono do negócio sem acesso aos próprios
+// registros é outra, e é a que vira processo.
+const SYSTEM_SUSPENDED = {
+  ativo: false,
+  titulo: 'Sistema suspenso',
+  motivo: 'Suspensão por falta de pagamento, conforme contrato.',
+  instrucao: 'Regularize o pagamento para reativar o acesso.',
+  contato: '',
+  permitirExportacao: true
+};
+
+window.exportarDadosSuspensao = async function() {
+  const btn = document.getElementById('btnExportSuspensao');
+  const original = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparando...'; }
+
+  try {
+    let dados = null;
+    try { dados = await loadFromIDB(); } catch (e) { console.warn('IDB indisponível', e); }
+    if (!dados) {
+      try { dados = JSON.parse(localStorage.getItem('convpro_db') || 'null'); } catch (e) {}
+    }
+    if (!dados) {
+      alert('Nenhum dado encontrado neste navegador.');
+      return;
+    }
+
+    const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup_conveniencia_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error('Falha ao exportar', e);
+    alert('Não foi possível gerar o arquivo. Tente novamente.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = original; }
+  }
+};
+
+function renderSystemSuspendedScreen() {
+  const linhas = [
+    SYSTEM_SUSPENDED.motivo,
+    SYSTEM_SUSPENDED.instrucao,
+    SYSTEM_SUSPENDED.contato ? `Contato: ${SYSTEM_SUSPENDED.contato}` : ''
+  ].filter(Boolean);
+
+  return `
+  <div style="position:fixed; inset:0; z-index:2147483647; display:flex; align-items:center;
+       justify-content:center; padding:24px; background:#0c0708; font-family:Inter,'Segoe UI',system-ui,sans-serif;">
+    <div style="width:100%; max-width:540px; text-align:center; padding:40px 32px;
+         border:2px solid rgba(229,57,53,.9); border-radius:16px;
+         background:linear-gradient(180deg, rgba(38,12,12,.98), rgba(20,8,8,.98));">
+      <div style="font-size:56px; line-height:1; margin-bottom:16px;">🔒</div>
+      <div style="font-size:26px; font-weight:800; color:#fff; margin-bottom:18px;">
+        ${SYSTEM_SUSPENDED.titulo}
+      </div>
+      ${linhas.map(l => `<div style="font-size:15px; color:#ffcdd2; line-height:1.6; margin-bottom:8px;">${l}</div>`).join('')}
+      ${SYSTEM_SUSPENDED.permitirExportacao ? `
+      <button id="btnExportSuspensao" onclick="exportarDadosSuspensao()"
+        style="margin-top:26px; font:inherit; font-size:14px; font-weight:600; color:#fff; cursor:pointer;
+               background:transparent; border:1px solid rgba(255,255,255,.35); border-radius:10px; padding:12px 26px;">
+        Baixar meus dados
+      </button>
+      <div style="font-size:12px; color:#b0868a; margin-top:12px;">
+        Seus dados de venda continuam seus e podem ser baixados a qualquer momento.
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+// Retorna true quando bloqueou — o chamador deve parar a inicialização.
+function applySystemSuspension() {
+  if (!SYSTEM_SUSPENDED.ativo) return false;
+  document.body.innerHTML = renderSystemSuspendedScreen();
+  return true;
+}
+
 // ===================== AVISO DE PENDÊNCIA FINANCEIRA =====================
 // Para ligar: trocar `ativo` para true, preencher os campos e dar push.
 // O site (Hostinger) e o app desktop pegam a mudança sozinhos, sem reinstalar.
