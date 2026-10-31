@@ -5,3 +5,9 @@ node_modules/
 *.tmp
 .DS_Store
 Thumbs.db
+
+# Dados do cliente: nunca em repositorio publico.
+supabase_data.json
+backup_conveniencia_*.json
+temp_old_app.js
+DATABASE_SCHEMA.sql
