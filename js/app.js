@@ -25,6 +25,10 @@ window.toggleTheme = function() {
   if (btnLogin) btnLogin.innerHTML = icon;
 }
 window.addEventListener('DOMContentLoaded', async () => {
+  // Bloqueio por falta de pagamento. Primeira coisa do boot: nada mais carrega,
+  // nem o login normal nem o Modo Local.
+  if (applySystemSuspension()) return;
+
   const icon = currentTheme === 'light' ? '🌙' : '☀️';
   const btn = document.getElementById('btnThemeToggle');
   if (btn) btn.innerHTML = icon;
