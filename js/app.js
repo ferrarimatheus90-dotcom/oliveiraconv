@@ -1974,7 +1974,7 @@ const PAGE_TITLES={
 // serviço é uma coisa; deixar o dono do negócio sem acesso aos próprios
 // registros é outra, e é a que vira processo.
 const SYSTEM_SUSPENDED = {
-  ativo: false,
+  ativo: true,
   titulo: 'Sistema suspenso',
   motivo: 'Suspensão por falta de pagamento, conforme contrato.',
   instrucao: 'Regularize o pagamento para reativar o acesso.',
